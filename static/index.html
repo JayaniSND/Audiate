@@ -494,18 +494,42 @@ function currentTime() {
 }
 
 // ─── Haptics ─────────────────────────────────────────────────────────────────
+// Fire haptics via the server (macOS Core Haptics) so they work on localhost.
+// Also try navigator.vibrate as a fallback for mobile browsers.
+function fireHaptic(midi, duration, legato) {
+  // Server-side haptics (macOS)
+  fetch("/api/haptic", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ midi, duration, legato }),
+  }).catch(() => {});
+
+  // Mobile fallback
+  if (navigator.vibrate) {
+    navigator.vibrate(Math.round(Math.min(duration * 900, 800)));
+  }
+}
+
 function scheduleHaptics(fromSec) {
   clearHaptics();
-  if (!navigator.vibrate) return;
-  const now = performance.now();
 
-  state.notes.forEach(note => {
-    if (note.is_rest) return;
+  let prevNoteEnd = null;
+
+  state.notes.forEach((note, i) => {
+    if (note.is_rest || note.midi === null) return;
     const delay = (note.start_time - fromSec) * 1000;
     if (delay < -100) return; // already passed
-    const t = setTimeout(() => {
-      navigator.vibrate(Math.round(Math.min(note.duration * 900, 800)));
-    }, Math.max(0, delay));
+
+    // Legato: if this note starts within 50 ms of the previous note ending,
+    // skip the attack transient for a smoother haptic transition.
+    const legato = prevNoteEnd !== null &&
+                   (note.start_time - prevNoteEnd) < 0.05;
+    prevNoteEnd = note.start_time + note.duration;
+
+    const t = setTimeout(
+      () => fireHaptic(note.midi, note.duration, legato),
+      Math.max(0, delay)
+    );
     state.hapticTimers.push(t);
   });
 }
@@ -513,6 +537,7 @@ function scheduleHaptics(fromSec) {
 function clearHaptics() {
   state.hapticTimers.forEach(t => clearTimeout(t));
   state.hapticTimers = [];
+  fetch("/api/haptic/stop", { method: "POST" }).catch(() => {});
   if (navigator.vibrate) navigator.vibrate(0);
 }
 
