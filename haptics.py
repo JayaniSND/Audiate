@@ -32,14 +32,17 @@ def kill_haptic():
             _current_process.terminate()
             _current_process = None
 
+# 7 bands tuned to the human humming range (~C3–C5, MIDI 50–72).
+# Each band covers ~4 semitones so every small pitch shift feels different,
+# instead of the old orchestral mapping where most hums fell into 2–3 bands.
 HAPTIC_BANDS = [
-    (43,  "very_low"),
-    (50,  "low"),
-    (57,  "mid_low"),
-    (64,  "mid"),
-    (71,  "mid_high"),
-    (79,  "high"),
-    (999, "very_high"),
+    (50,  "very_low"),   # below D3   — very deep hum
+    (55,  "low"),        # D3–G3      — low hum
+    (60,  "mid_low"),    # G3–C4      — low-mid hum
+    (64,  "mid"),        # C4–E4      — mid hum (most common)
+    (68,  "mid_high"),   # E4–Ab4     — upper-mid hum
+    (72,  "high"),       # Ab4–C5     — high hum
+    (999, "very_high"),  # above C5   — falsetto/very high
 ]
 
 def map_note_to_mode(midi):
@@ -50,7 +53,8 @@ def map_note_to_mode(midi):
             return mode
     return "very_high"
 
-def trigger_haptic_for_note(midi, duration):
+def trigger_haptic_for_note(midi, duration, legato=False):
+    """legato=True skips the attack phase for smooth note transitions."""
     global _current_process
     mode = map_note_to_mode(midi)
     if mode is None:
@@ -59,7 +63,7 @@ def trigger_haptic_for_note(midi, duration):
     def _fire():
         global _current_process
         proc = subprocess.Popen(
-            [HAPTIC_BINARY, mode, f"{duration:.3f}"],
+            [HAPTIC_BINARY, mode, f"{duration:.3f}", "1" if legato else "0"],
         )
         with _process_lock:
             _current_process = proc

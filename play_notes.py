@@ -20,6 +20,9 @@ def play(json_path):
     total_duration = meta["total_duration"]
     start_clock = time.perf_counter()
 
+    LEGATO_SEMITONES = 3   # interval ≤ this → skip attack (smooth hum transition)
+
+    prev_midi = None
     for i, note in enumerate(notes):
         if i + 1 < len(notes):
             next_start = notes[i + 1]["start_time"]
@@ -32,7 +35,16 @@ def play(json_path):
         haptic_duration = max(0.05, slot_duration - BOUNDARY_GAP)
 
         if not note["is_rest"]:
-            trigger_haptic_for_note(note["midi"], haptic_duration)
+            midi = note["midi"]
+            legato = (
+                prev_midi is not None
+                and midi is not None
+                and abs(midi - prev_midi) <= LEGATO_SEMITONES
+            )
+            trigger_haptic_for_note(midi, haptic_duration, legato=legato)
+            prev_midi = midi
+        else:
+            prev_midi = None  # rest breaks the legato chain
 
         # Sleep until (next_note_start - BOUNDARY_GAP) — enforces silence gap
         target_time = start_clock + next_start - BOUNDARY_GAP

@@ -4,6 +4,7 @@ import Foundation
 let args = CommandLine.arguments
 let mode     = args.count > 1 ? args[1] : "mid"
 let duration = args.count > 2 ? Double(args[2]) ?? 0.3 : 0.3
+let legato   = args.count > 3 && args[3] == "1"
 
 func sustainConfig(mode: String) -> (pattern: NSHapticFeedbackManager.FeedbackPattern, interval: Double) {
     switch mode {
@@ -18,42 +19,38 @@ func sustainConfig(mode: String) -> (pattern: NSHapticFeedbackManager.FeedbackPa
     }
 }
 
-// Attack scaled to pitch — high notes get a sharp snap, low notes get a slow thud
+// Single soft onset — one gentle pulse that matches the breathy start of a hum.
+// Skipped entirely when legato=true (consecutive close-pitched notes).
 func fireAttack(mode: String) {
     switch mode {
     case "very_high", "high":
-        // 4 very rapid light taps — sharp percussive snap
-        for i in 0..<4 {
-            NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
-            if i < 3 { Thread.sleep(forTimeInterval: 0.006) }
-        }
+        NSHapticFeedbackManager.defaultPerformer.perform(.generic, performanceTime: .now)
+        Thread.sleep(forTimeInterval: 0.010)
     case "mid_high", "mid":
-        // 3 medium clicks
-        for i in 0..<3 {
-            NSHapticFeedbackManager.defaultPerformer.perform(.generic, performanceTime: .now)
-            if i < 2 { Thread.sleep(forTimeInterval: 0.010) }
-        }
+        NSHapticFeedbackManager.defaultPerformer.perform(.generic, performanceTime: .now)
+        Thread.sleep(forTimeInterval: 0.015)
     case "mid_low", "low", "very_low":
-        // 2 slow heavy thuds — feels like a bow catching a low string
-        for i in 0..<2 {
-            NSHapticFeedbackManager.defaultPerformer.perform(.levelChange, performanceTime: .now)
-            if i < 1 { Thread.sleep(forTimeInterval: 0.020) }
-        }
+        NSHapticFeedbackManager.defaultPerformer.perform(.levelChange, performanceTime: .now)
+        Thread.sleep(forTimeInterval: 0.020)
     default:
         NSHapticFeedbackManager.defaultPerformer.perform(.generic, performanceTime: .now)
+        Thread.sleep(forTimeInterval: 0.015)
     }
 }
 
 let (pattern, interval) = sustainConfig(mode: mode)
 
-// Attack
-fireAttack(mode: mode)
+// Attack (skipped for legato transitions)
+if !legato {
+    fireAttack(mode: mode)
+}
 
 // Small gap so attack and sustain don't blur together
-Thread.sleep(forTimeInterval: 0.015)
+Thread.sleep(forTimeInterval: legato ? 0.005 : 0.015)
 
 // Sustain
-let attackTime   = 0.015 + (mode.contains("high") ? 0.030 : mode.contains("low") ? 0.055 : 0.040)
+// Attack is a single pulse — subtract the gap we already slept
+let attackTime   = legato ? 0.005 : 0.015 + (mode.contains("high") ? 0.010 : mode.contains("low") ? 0.020 : 0.015)
 let sustainDuration = max(0, duration - attackTime)
 let count = max(0, Int(sustainDuration / interval))
 
