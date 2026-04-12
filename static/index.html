@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audiate</title>
+<script src="https://unpkg.com/roughjs@4.6.6/bundled/rough.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -90,6 +91,76 @@
     color: #fff;
     min-width: 80px;
   }
+  .btn-animate {
+    background: #1c2e1a;
+    color: #7dbd70;
+    border: 1px solid #2e4a28;
+  }
+
+  /* ── Violin modal ── */
+  #violin-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(3,3,10,0.72);
+    backdrop-filter: blur(5px);
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+  }
+  #violin-modal.visible { display: flex; }
+  #violin-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.65);
+    display: flex;
+    flex-direction: column;
+  }
+  #violin-panel-hdr {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  #violin-panel-hdr button {
+    background: none;
+    color: var(--muted);
+    padding: 3px 8px;
+    font-size: 1rem;
+    border-radius: 6px;
+  }
+  #violin-panel-hdr button:hover { color: var(--text); background: var(--border); }
+  #violin-canvas {
+    display: block;
+    width: 600px;
+    height: 430px;
+    max-width: 90vw;
+  }
+  #violin-status {
+    display: flex;
+    gap: 28px;
+    padding: 11px 20px;
+    border-top: 1px solid var(--border);
+    font-size: 0.78rem;
+    color: var(--muted);
+    align-items: center;
+  }
+  #viol-note {
+    font-size: 1.15rem;
+    font-weight: 800;
+    min-width: 44px;
+    font-variant-numeric: tabular-nums;
+  }
+  #viol-bow  { letter-spacing: 0.02em; }
+  #viol-pos  { margin-left: auto; font-style: italic; }
 
   /* ── status bar ── */
   #status-bar {
@@ -204,7 +275,8 @@
   <div class="controls">
     <button class="btn-upload" id="btn-upload">Upload File</button>
     <button class="btn-record" id="btn-record">⏺ Record</button>
-    <button class="btn-play"   id="btn-play" disabled>Play</button>
+    <button class="btn-play"    id="btn-play"    disabled>Play</button>
+    <button class="btn-animate" id="btn-animate" disabled>Animate</button>
   </div>
 </header>
 
@@ -233,6 +305,22 @@
 
 <input type="file" id="file-input" accept="audio/*">
 
+<!-- ── Violin modal ─────────────────────────────────────────────────────── -->
+<div id="violin-modal">
+  <div id="violin-panel">
+    <div id="violin-panel-hdr">
+      <span>Violin Visualizer</span>
+      <button id="btn-violin-close">✕</button>
+    </div>
+    <canvas id="violin-canvas" width="600" height="430"></canvas>
+    <div id="violin-status">
+      <span id="viol-note" style="color:#7a5030">—</span>
+      <span id="viol-bow">—</span>
+      <span id="viol-pos">—</span>
+    </div>
+  </div>
+</div>
+
 <script>
 // ─── State ────────────────────────────────────────────────────────────────────
 const state = {
@@ -255,6 +343,7 @@ const ctx2d         = canvas.getContext("2d");
 const btnUpload     = document.getElementById("btn-upload");
 const btnRecord     = document.getElementById("btn-record");
 const btnPlay       = document.getElementById("btn-play");
+const btnAnimate    = document.getElementById("btn-animate");
 const fileInput     = document.getElementById("file-input");
 const statusBar     = document.getElementById("status-bar");
 const noteNameEl    = document.getElementById("note-name");
@@ -427,8 +516,9 @@ async function sendToServer(file) {
   }
 
   hideOverlay();
-  btnPlay.disabled = false;
+  btnPlay.disabled    = false;
   btnPlay.textContent = "Play";
+  btnAnimate.disabled = false;
   const nc = state.meta.note_count;
   setStatus(`Ready — ${nc} note${nc !== 1 ? "s" : ""} detected  ·  BPM ${state.meta.bpm}  ·  ${fmt(state.meta.total_duration)}`, true);
 }
@@ -746,6 +836,279 @@ function hideOverlay() {
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 drawIdle();
+</script>
+
+<script>
+// ─── Violin Animation ─────────────────────────────────────────────────────────
+(function () {
+  const VW = 600, VH = 430;
+
+  // ── Layout ──────────────────────────────────────────────────────────────────
+  const HEAD     = { x: 355, y: 82,  rx: 34, ry: 38 };
+  const L_SHOUL  = { x: 278, y: 158 };  // violin arm
+  const R_SHOUL  = { x: 418, y: 158 };  // bow arm
+  const BODY_TOP = { x: 332, y: 120 };
+  const BODY_BOT = { x: 328, y: 368 };
+
+  const NUT      = { x: 102, y: 84  };
+  const SCROLL   = { x: 76,  y: 64  };
+  const NECK_JN  = { x: 160, y: 154 };  // neck–body join
+  const VIOL_UC  = { x: 162, y: 188 };  // upper bout centre
+  const VIOL_LC  = { x: 174, y: 272 };  // lower bout centre
+  const BRIDGE   = { x: 168, y: 226 };
+  const TAIL     = { x: 176, y: 292 };
+
+  const BOW_Y       = 222;  // y of bow hair at bridge
+  const BOW_LEN     = 248;
+  const FROG_X_MAX  = 398;  // arm pulled in  (start of down-bow)
+  const FROG_X_MIN  = 292;  // arm extended   (end of down-bow)
+  const STRING_XS   = [155, 162, 169, 176]; // 4 string x-positions
+
+  // ── State ────────────────────────────────────────────────────────────────────
+  let vCanvas, vCtx, rc;
+  let staticImg   = null;
+  let bowPos      = 0.5;  // 0 = frog on strings, 1 = tip on strings
+  let bowDir      = 1;    // +1 down-bow, −1 up-bow
+  let lastNoteIdx = -1;
+  let animId      = null;
+  let isOpen      = false;
+
+  // ── Helpers ──────────────────────────────────────────────────────────────────
+  function frogX() {
+    return FROG_X_MAX - bowPos * (FROG_X_MAX - FROG_X_MIN);
+  }
+
+  function fingerPos(midi) {
+    if (!midi) return { x: NUT.x + 3, y: NUT.y + 2 };
+    const t = Math.max(0, Math.min(1, (midi - 55) / (84 - 55)));
+    return {
+      x: NUT.x + t * (NECK_JN.x - NUT.x),
+      y: NUT.y + t * (NECK_JN.y - NUT.y),
+    };
+  }
+
+  // ── Static render (violin body + figure torso, cached) ───────────────────────
+  function renderStatic() {
+    const oc  = document.createElement('canvas');
+    oc.width  = VW; oc.height = VH;
+    const ox  = oc.getContext('2d');
+    const orc = rough.canvas(oc);
+
+    // Paper background
+    ox.fillStyle = '#f7f2e8';
+    ox.fillRect(0, 0, VW, VH);
+    for (let i = 0; i < 1400; i++) {
+      ox.fillStyle = `rgba(160,140,100,${Math.random() * 0.022})`;
+      ox.fillRect(Math.random() * VW, Math.random() * VH, 2, 2);
+    }
+
+    const wood = { roughness: 1.4, stroke: '#4a2e10', strokeWidth: 2.2, fill: '#c4883a', fillStyle: 'solid' };
+    const dark = { roughness: 1.5, stroke: '#2a1608', strokeWidth: 1.8, fill: '#1a0e04', fillStyle: 'solid' };
+
+    // Lower bout
+    orc.ellipse(VIOL_LC.x, VIOL_LC.y, 94, 82, wood);
+    // Upper bout
+    orc.ellipse(VIOL_UC.x, VIOL_UC.y, 74, 66, wood);
+    // Waist fill
+    ox.fillStyle = '#c4883a';
+    ox.beginPath();
+    ox.ellipse(VIOL_UC.x + 4, VIOL_UC.y + 42, 36, 20, 0.15, 0, Math.PI * 2);
+    ox.fill();
+    // Re-outline
+    orc.ellipse(VIOL_LC.x, VIOL_LC.y, 94, 82, { roughness: 1.2, stroke: '#4a2e10', strokeWidth: 2, fill: 'transparent' });
+    orc.ellipse(VIOL_UC.x, VIOL_UC.y, 74, 66, { roughness: 1.2, stroke: '#4a2e10', strokeWidth: 2, fill: 'transparent' });
+    // Purfling
+    orc.ellipse(VIOL_LC.x, VIOL_LC.y, 82, 70, { roughness: 1, stroke: '#2a1608', strokeWidth: 1, fill: 'transparent' });
+
+    // F-holes
+    orc.line(BRIDGE.x - 16, BRIDGE.y - 22, BRIDGE.x - 20, BRIDGE.y + 18, { roughness: 2.2, stroke: '#2a1608', strokeWidth: 2.2 });
+    orc.line(BRIDGE.x + 12, BRIDGE.y - 20, BRIDGE.x + 10, BRIDGE.y + 20, { roughness: 2.2, stroke: '#2a1608', strokeWidth: 2.2 });
+
+    // Neck wood
+    orc.line(NUT.x, NUT.y, NECK_JN.x, NECK_JN.y, { roughness: 0.8, stroke: '#7a5030', strokeWidth: 13 });
+    // Fingerboard (darker)
+    orc.line(NUT.x - 2, NUT.y + 2, NECK_JN.x - 2, NECK_JN.y + 2, { roughness: 0.5, stroke: '#1a0e04', strokeWidth: 7 });
+
+    // 4 Strings
+    for (let i = 0; i < 4; i++) {
+      const nutOff = -6 + i * 4;
+      orc.line(NUT.x + nutOff, NUT.y + 2, STRING_XS[i], TAIL.y - 2,
+        { roughness: 0.3, stroke: '#909090', strokeWidth: 0.9 });
+    }
+
+    // Bridge arch
+    orc.arc(BRIDGE.x, BRIDGE.y - 4, 26, 14, Math.PI, 0, false, { roughness: 2, stroke: '#7a5030', strokeWidth: 2.5 });
+    orc.line(BRIDGE.x - 10, BRIDGE.y + 4, BRIDGE.x + 10, BRIDGE.y + 4, { roughness: 1, stroke: '#7a5030', strokeWidth: 1.5 });
+
+    // Scroll
+    orc.arc(SCROLL.x + 10, SCROLL.y + 10, 26, 26, Math.PI * 0.5, Math.PI * 2.6, false, { roughness: 2.5, stroke: '#3a1e08', strokeWidth: 2.8 });
+    orc.arc(SCROLL.x + 8,  SCROLL.y + 8,  13, 13, Math.PI * 0.5, Math.PI * 2.6, false, { roughness: 2,   stroke: '#3a1e08', strokeWidth: 1.5 });
+
+    // Tailpiece
+    orc.polygon(
+      [[TAIL.x - 14, TAIL.y - 5], [TAIL.x + 14, TAIL.y - 5],
+       [TAIL.x + 10, TAIL.y + 18], [TAIL.x - 10, TAIL.y + 18]],
+      dark
+    );
+
+    // Chin rest
+    orc.ellipse(VIOL_UC.x + 22, VIOL_UC.y - 34, 28, 14,
+      { roughness: 1.5, stroke: '#3a1e08', fill: '#1a0e04', fillStyle: 'solid', strokeWidth: 1.5 });
+
+    // Head
+    orc.ellipse(HEAD.x, HEAD.y, HEAD.rx * 2, HEAD.ry * 2,
+      { roughness: 1.2, stroke: '#3a2008', strokeWidth: 1.8, fill: '#f0c880', fillStyle: 'solid' });
+    // Hair
+    orc.arc(HEAD.x, HEAD.y - 10, HEAD.rx * 2 - 2, HEAD.ry * 1.5, Math.PI, 0, false,
+      { roughness: 3.5, stroke: '#180e00', strokeWidth: 6 });
+    // Ear
+    orc.arc(HEAD.x - HEAD.rx + 2, HEAD.y + 4, 10, 14, Math.PI * 0.5, Math.PI * 1.5, false,
+      { roughness: 2, stroke: '#c09060', strokeWidth: 1.5 });
+
+    // Torso / jacket
+    orc.line(BODY_TOP.x, BODY_TOP.y, L_SHOUL.x, L_SHOUL.y, { roughness: 1.5, stroke: '#1a1828', strokeWidth: 6 });
+    orc.line(BODY_TOP.x, BODY_TOP.y, R_SHOUL.x, R_SHOUL.y, { roughness: 1.5, stroke: '#1a1828', strokeWidth: 6 });
+    orc.line(BODY_TOP.x, BODY_TOP.y, BODY_BOT.x, BODY_BOT.y, { roughness: 1.5, stroke: '#1a1828', strokeWidth: 6 });
+    orc.ellipse(BODY_TOP.x + 18, BODY_TOP.y + 105, 95, 178,
+      { roughness: 2, stroke: '#12101e', fill: '#12101e', fillStyle: 'hachure', fillWeight: 2.5, hachureGap: 9, hachureAngle: 42 });
+    // Shirt front
+    orc.line(BODY_TOP.x + 12, BODY_TOP.y + 8, BODY_TOP.x + 12, BODY_TOP.y + 48,
+      { roughness: 1.5, stroke: '#e8e0d0', strokeWidth: 2 });
+
+    // Legs
+    orc.line(BODY_BOT.x - 12, BODY_BOT.y, BODY_BOT.x - 18, BODY_BOT.y + 62, { roughness: 2, stroke: '#1a1828', strokeWidth: 5 });
+    orc.line(BODY_BOT.x + 8,  BODY_BOT.y, BODY_BOT.x + 12, BODY_BOT.y + 62, { roughness: 2, stroke: '#1a1828', strokeWidth: 5 });
+
+    staticImg = oc;
+  }
+
+  // ── Per-frame draw ───────────────────────────────────────────────────────────
+  function drawFrame() {
+    if (!isOpen) return;
+    animId = requestAnimationFrame(drawFrame);
+
+    const t     = currentTime();
+    const notes = state.notes;
+
+    // Find active note
+    let activeNote = null, noteIdx = -1;
+    for (let i = 0; i < notes.length; i++) {
+      const n = notes[i];
+      if (!n.is_rest && n.start_time <= t && t < n.start_time + n.duration) {
+        activeNote = n; noteIdx = i; break;
+      }
+    }
+
+    // Note change → flip bow direction
+    if (noteIdx !== -1 && noteIdx !== lastNoteIdx) {
+      bowDir = -bowDir;
+      lastNoteIdx = noteIdx;
+    }
+
+    // Advance bow (speed ∝ 1/duration so short notes = fast bow)
+    if (activeNote) {
+      const speed = Math.min(0.022, 0.45 / (activeNote.duration * 60));
+      bowPos += bowDir * speed;
+      if (bowPos >= 1) { bowPos = 1; bowDir = -1; }
+      if (bowPos <= 0) { bowPos = 0; bowDir =  1; }
+    }
+
+    const fp   = activeNote ? fingerPos(activeNote.midi) : { x: NUT.x + 3, y: NUT.y + 2 };
+    const fx   = frogX();
+    const tipX = fx - BOW_LEN;
+
+    // Composite: static base first
+    vCtx.clearRect(0, 0, VW, VH);
+    vCtx.drawImage(staticImg, 0, 0);
+
+    // ── Left arm (violin arm) ──
+    const elbLX = (L_SHOUL.x + fp.x) / 2 - 14;
+    const elbLY = (L_SHOUL.y + fp.y) / 2 + 28;
+    rc.line(L_SHOUL.x, L_SHOUL.y, elbLX, elbLY, { roughness: 1.5, stroke: '#1a1828', strokeWidth: 6 });
+    rc.line(elbLX, elbLY, fp.x, fp.y,            { roughness: 1.2, stroke: '#1a1828', strokeWidth: 5 });
+    // Left hand
+    rc.ellipse(fp.x - 3, fp.y + 1, 15, 10,
+      { roughness: 2, stroke: '#3a2008', fill: '#f0c880', fillStyle: 'solid', strokeWidth: 1.5 });
+    // Pressing fingers
+    if (activeNote) {
+      for (let f = 0; f < 3; f++) {
+        rc.ellipse(fp.x - 5 + f * 3, fp.y + 3, 5, 4,
+          { roughness: 1.5, stroke: '#3a2008', fill: '#d0a060', fillStyle: 'solid', strokeWidth: 1 });
+      }
+    }
+
+    // ── Right arm (bow arm) ──
+    const elbRX = (R_SHOUL.x + fx) / 2 + 18;
+    const elbRY = 218;
+    rc.line(R_SHOUL.x, R_SHOUL.y, elbRX, elbRY, { roughness: 1.5, stroke: '#1a1828', strokeWidth: 6 });
+    rc.line(elbRX, elbRY, fx, BOW_Y + 5,         { roughness: 1.2, stroke: '#1a1828', strokeWidth: 5 });
+    // Right hand
+    rc.ellipse(fx + 3, BOW_Y + 9, 18, 12,
+      { roughness: 1.8, stroke: '#3a2008', fill: '#f0c880', fillStyle: 'solid', strokeWidth: 1.5 });
+
+    // ── Bow ──
+    // Stick (pernambuco wood)
+    rc.line(tipX, BOW_Y - 10, fx, BOW_Y + 4, { roughness: 0.7, stroke: '#6a3e18', strokeWidth: 3.5 });
+    // Bow hair
+    rc.line(tipX + 7, BOW_Y - 1, fx - 12, BOW_Y + 1, { roughness: 0.4, stroke: '#e0d8c8', strokeWidth: 2 });
+    // Frog (ebony)
+    rc.rectangle(fx - 15, BOW_Y - 4, 15, 12,
+      { roughness: 1.5, stroke: '#2a1608', fill: '#1a0e04', fillStyle: 'solid', strokeWidth: 1.5 });
+    // Tip (ivory)
+    rc.rectangle(tipX - 4, BOW_Y - 12, 8, 8,
+      { roughness: 1.5, stroke: '#4a3018', fill: '#f0ece0', fillStyle: 'solid', strokeWidth: 1 });
+
+    // ── Rosin dust at string contact ──
+    if (activeNote) {
+      vCtx.save();
+      for (let i = 0; i < 6; i++) {
+        vCtx.globalAlpha = 0.1 + Math.random() * 0.15;
+        vCtx.fillStyle   = '#d4a040';
+        vCtx.beginPath();
+        vCtx.arc(163 + (Math.random() - 0.5) * 12, BOW_Y + (Math.random() - 0.5) * 8,
+                 Math.random() * 2.5 + 0.5, 0, Math.PI * 2);
+        vCtx.fill();
+      }
+      vCtx.restore();
+    }
+
+    // ── Status labels ──
+    const hue = activeNote ? (240 + ((activeNote.midi - 48) / 36) * 200) % 360 : null;
+    document.getElementById('viol-note').textContent = activeNote ? activeNote.note_name : '—';
+    document.getElementById('viol-note').style.color = hue ? `hsl(${hue},65%,40%)` : '#7a5030';
+    document.getElementById('viol-bow').textContent  = bowDir > 0 ? '↓ down bow' : '↑ up bow';
+    document.getElementById('viol-pos').textContent  =
+      !activeNote       ? 'open string' :
+      activeNote.midi < 58 ? '1st pos'   :
+      activeNote.midi < 64 ? '2nd pos'   :
+      activeNote.midi < 70 ? '3rd pos'   : '4th+ pos';
+  }
+
+  // ── Open / close ─────────────────────────────────────────────────────────────
+  function openModal() {
+    if (!staticImg) renderStatic();
+    isOpen = true; bowPos = 0.5; bowDir = 1; lastNoteIdx = -1;
+    document.getElementById('violin-modal').classList.add('visible');
+    drawFrame();
+  }
+  function closeModal() {
+    isOpen = false;
+    document.getElementById('violin-modal').classList.remove('visible');
+    if (animId) { cancelAnimationFrame(animId); animId = null; }
+  }
+
+  window.addEventListener('DOMContentLoaded', () => {
+    vCanvas = document.getElementById('violin-canvas');
+    vCtx    = vCanvas.getContext('2d');
+    rc      = rough.canvas(vCanvas);
+
+    document.getElementById('btn-animate').addEventListener('click', openModal);
+    document.getElementById('btn-violin-close').addEventListener('click', closeModal);
+    document.getElementById('violin-modal').addEventListener('click', e => {
+      if (e.target.id === 'violin-modal') closeModal();
+    });
+  });
+})();
 </script>
 </body>
 </html>
