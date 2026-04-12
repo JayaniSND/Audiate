@@ -10,16 +10,33 @@ def play(json_path):
     with open(json_path) as f:
         data = json.load(f)
 
+    meta  = data["meta"]
     notes = data["notes"]
-    print(f"Playing {len(notes)} notes...")
+    print(f"BPM: {meta['bpm']} | Notes: {meta['note_count']} | Duration: {meta['total_duration']}s")
 
-    print(f"Playing {len(notes)} notes...")
-    for note in notes:
+    total_duration = meta["total_duration"]
+    start_clock = time.perf_counter()
+
+    for i, note in enumerate(notes):
+        # How long until the NEXT note starts (or the file ends)
+        if i + 1 < len(notes):
+            next_start = notes[i + 1]["start_time"]
+        else:
+            next_start = total_duration
+
+        slot_duration = next_start - note["start_time"]
+
+        # Trim haptic to 90% of the slot so it never bleeds into next note
+        haptic_duration = slot_duration * 0.90
+
         if not note["is_rest"]:
-            trigger_haptic_for_note(note["midi"], note["duration"])
-            # animation call will go here later
+            trigger_haptic_for_note(note["midi"], haptic_duration)
 
-        time.sleep(note["duration"])
+        # Sleep until the exact moment the next note should start
+        target_time = start_clock + next_start
+        sleep_for = target_time - time.perf_counter()
+        if sleep_for > 0:
+            time.sleep(sleep_for)
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
