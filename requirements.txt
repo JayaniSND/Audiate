@@ -1,0 +1,6 @@
+setuptools
+crepe @ git+https://github.com/marl/crepe.git
+librosa==0.10.2
+numpy==1.26.4
+scipy==1.13.1
+soundfile==0.12.1

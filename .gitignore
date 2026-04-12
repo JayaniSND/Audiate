@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.env
+venv/
+.venv/
+
+# Audio files (likely large / personal recordings)
+*.wav
+*.mp3
+*.flac
+*.ogg
+*.m4a
+
+# Generated output (re-run the script to reproduce)
+*.json
+
+# CREPE model weights (auto-downloaded on first run, no need to commit)
+~/.keras/
+*.h5
+
+# OS
+.DS_Store
+Thumbs.db
