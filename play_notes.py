@@ -1,7 +1,10 @@
 import json
 import time
 import sys
-from haptics import compile_haptic_binary, trigger_haptic_for_note
+import subprocess
+from haptics import compile_haptic_binary, trigger_haptic_for_note, kill_haptic
+
+BOUNDARY_GAP = 0.045  # seconds of silence between notes — tweak this to taste
 
 def play(json_path):
     if not compile_haptic_binary():
@@ -18,7 +21,6 @@ def play(json_path):
     start_clock = time.perf_counter()
 
     for i, note in enumerate(notes):
-        # How long until the NEXT note starts (or the file ends)
         if i + 1 < len(notes):
             next_start = notes[i + 1]["start_time"]
         else:
@@ -26,17 +28,24 @@ def play(json_path):
 
         slot_duration = next_start - note["start_time"]
 
-        # Trim haptic to 90% of the slot so it never bleeds into next note
-        haptic_duration = slot_duration * 0.90
+        # Haptic gets the slot minus the boundary gap on each side
+        haptic_duration = max(0.05, slot_duration - BOUNDARY_GAP)
 
         if not note["is_rest"]:
             trigger_haptic_for_note(note["midi"], haptic_duration)
 
-        # Sleep until the exact moment the next note should start
-        target_time = start_clock + next_start
+        # Sleep until (next_note_start - BOUNDARY_GAP) — enforces silence gap
+        target_time = start_clock + next_start - BOUNDARY_GAP
         sleep_for = target_time - time.perf_counter()
         if sleep_for > 0:
             time.sleep(sleep_for)
+
+        # Kill any still-running haptic, then wait out the gap
+        kill_haptic()
+        gap_end = start_clock + next_start
+        gap_remaining = gap_end - time.perf_counter()
+        if gap_remaining > 0:
+            time.sleep(gap_remaining)
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:

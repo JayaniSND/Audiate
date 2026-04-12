@@ -6,6 +6,10 @@ BASE_DIR      = os.path.dirname(os.path.abspath(__file__))
 SWIFT_SRC     = os.path.join(BASE_DIR, "haptic_player.swift")
 HAPTIC_BINARY = os.path.join(BASE_DIR, "haptic_player")
 
+# Track the current haptic process so we can kill it
+_current_process = None
+_process_lock    = threading.Lock()
+
 def compile_haptic_binary():
     if os.path.exists(HAPTIC_BINARY):
         return True
@@ -20,16 +24,22 @@ def compile_haptic_binary():
     print("Haptic binary ready.")
     return True
 
-# 7 bands — maps the full MIDI range to distinct vibration speeds
-# Boundary notes chosen to match natural musical registers
+def kill_haptic():
+    """Immediately terminate any running haptic process."""
+    global _current_process
+    with _process_lock:
+        if _current_process and _current_process.poll() is None:
+            _current_process.terminate()
+            _current_process = None
+
 HAPTIC_BANDS = [
-    (43,  "very_low"),   # below G2  — contrabass
-    (50,  "low"),        # G2–D3     — bass
-    (57,  "mid_low"),    # D3–A3     — cello/baritone
-    (64,  "mid"),        # A3–E4     — viola/tenor (middle of human voice)
-    (71,  "mid_high"),   # E4–B4     — violin/soprano
-    (79,  "high"),       # B4–G5     — high violin/flute
-    (999, "very_high"),  # above G5  — piccolo/whistle register
+    (43,  "very_low"),
+    (50,  "low"),
+    (57,  "mid_low"),
+    (64,  "mid"),
+    (71,  "mid_high"),
+    (79,  "high"),
+    (999, "very_high"),
 ]
 
 def map_note_to_mode(midi):
@@ -41,13 +51,18 @@ def map_note_to_mode(midi):
     return "very_high"
 
 def trigger_haptic_for_note(midi, duration):
+    global _current_process
     mode = map_note_to_mode(midi)
     if mode is None:
         return
 
     def _fire():
-        subprocess.run(
+        global _current_process
+        proc = subprocess.Popen(
             [HAPTIC_BINARY, mode, f"{duration:.3f}"],
-            capture_output=True
         )
+        with _process_lock:
+            _current_process = proc
+        proc.wait()
+
     threading.Thread(target=_fire, daemon=True).start()
