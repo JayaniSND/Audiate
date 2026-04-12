@@ -7,7 +7,6 @@ venv/
 .venv/
 
 # Audio files (likely large / personal recordings)
-*.wav
 *.mp3
 *.flac
 *.ogg
