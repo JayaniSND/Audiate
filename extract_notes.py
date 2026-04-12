@@ -176,7 +176,9 @@ def build_note_list(times, frequencies, confidences, onset_times, total_duration
         median_hz   = float(np.median(voiced))
         midi        = hz_to_midi(median_hz)
         note_name   = midi_to_name(midi)
-        mean_conf   = float(np.mean(seg_conf[mask & (frequencies >= MIN_NOTE_HZ)]))
+        # mean_conf   = float(np.mean(seg_conf[mask & (frequencies >= MIN_NOTE_HZ)]))
+        valid_mask = (seg_hz >= MIN_NOTE_HZ) & (seg_hz <= MAX_NOTE_HZ)
+        mean_conf  = float(np.mean(seg_conf[valid_mask]))
 
         notes.append({
             "note_name":   note_name,
