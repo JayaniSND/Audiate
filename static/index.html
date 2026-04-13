@@ -39,7 +39,7 @@
     align-items: center;
     gap: 12px;
     padding: 14px 24px;
-    background: rgba(22,13,8,0.85);
+    background: rgba(20,10,6,0.90);
     backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--border);
     flex-shrink: 0;
@@ -77,28 +77,28 @@
     border: 1px solid var(--border);
   }
   .btn-record {
-    background: #3d1f0f;
-    color: #ffb899;
-    border: 1px solid #7a3820;
+    background: #2a1510;
+    color: #FFA95A;
+    border: 1px solid #5a2a10;
   }
   .btn-record.recording {
-    background: #6b1a1a;
-    color: #ffaaaa;
-    border-color: #aa3333;
+    background: #5a1010;
+    color: #FF5A5A;
+    border-color: #FF5A5A;
     animation: pulse-rec 1s ease-in-out infinite;
   }
   @keyframes pulse-rec {
     0%,100% { opacity:1; } 50% { opacity:0.65; }
   }
   .btn-play {
-    background: linear-gradient(135deg, #FF5A5A, #FFD45A);
+    background: linear-gradient(135deg, #FF5A5A, #FF8B5A);
     color: #fff;
     min-width: 80px;
   }
   .btn-animate {
-    background: #1c1410;
-    color: #FFA95A;
-    border: 1px solid #4a2e18;
+    background: #2a1f0a;
+    color: #FFD45A;
+    border: 1px solid #5a3f10;
   }
 
   /* ── Violin modal ── */
@@ -106,7 +106,7 @@
     display: none;
     position: fixed;
     inset: 0;
-    background: rgba(3,3,10,0.72);
+    background: rgba(10,4,2,0.75);
     backdrop-filter: blur(5px);
     align-items: center;
     justify-content: center;
@@ -176,7 +176,7 @@
     min-height: 24px;
     letter-spacing: 0.03em;
   }
-  #status-bar.active { color: #FFA95A; }
+  #status-bar.active { color: #FF8B5A; }
 
   /* ── canvas area ── */
   #viz-wrap {
@@ -217,7 +217,7 @@
     align-items: center;
     gap: 14px;
     flex-shrink: 0;
-    background: rgba(22,13,8,0.85);
+    background: rgba(20,10,6,0.90);
     backdrop-filter: blur(12px);
     border-top: 1px solid var(--border);
   }
@@ -252,7 +252,7 @@
     display: none;
     position: absolute;
     inset: 0;
-    background: rgba(6,6,15,0.85);
+    background: rgba(15,8,6,0.88);
     backdrop-filter: blur(8px);
     flex-direction: column;
     align-items: center;
@@ -264,7 +264,7 @@
   .spinner {
     width: 48px; height: 48px;
     border: 3px solid var(--border);
-    border-top-color: #FF8B5A;
+    border-top-color: #FF5A5A;
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
   }
@@ -290,7 +290,7 @@
   <canvas id="canvas"></canvas>
 
   <div id="note-info">
-    <div id="note-name" style="color:#FF8B5A">—</div>
+    <div id="note-name" style="color:#FF5A5A">—</div>
     <div id="note-hz"></div>
   </div>
 
@@ -904,140 +904,201 @@ drawIdle();
   const VW = 600, VH = 430;
 
   // ── Layout ──────────────────────────────────────────────────────────────────
-  const HEAD     = { x: 355, y: 82,  rx: 34, ry: 38 };
-  const L_SHOUL  = { x: 278, y: 158 };  // violin arm
-  const R_SHOUL  = { x: 418, y: 158 };  // bow arm
-  const BODY_TOP = { x: 332, y: 120 };
-  const BODY_BOT = { x: 328, y: 368 };
+  // Player (3/4 view, face turned slightly left toward violin)
+  const HEAD     = { x: 372, y: 70,  rx: 26, ry: 31 };
+  const L_SHOUL  = { x: 304, y: 134 };   // violin-arm shoulder
+  const R_SHOUL  = { x: 436, y: 138 };   // bow-arm shoulder
+  const BODY_TOP = { x: 370, y: 112 };
+  const BODY_BOT = { x: 366, y: 372 };
 
-  const NUT      = { x: 102, y: 84  };
-  const SCROLL   = { x: 76,  y: 64  };
-  const NECK_JN  = { x: 160, y: 154 };  // neck–body join
-  const VIOL_UC  = { x: 162, y: 188 };  // upper bout centre
-  const VIOL_LC  = { x: 174, y: 272 };  // lower bout centre
-  const BRIDGE   = { x: 168, y: 226 };
-  const TAIL     = { x: 176, y: 292 };
+  // Violin — chin-rest end near player's chin, scroll points upper-left
+  const CHIN_REST = { x: 308, y: 126 };  // ebony chin rest (under player's jaw)
+  const VIOL_UC   = { x: 258, y: 158 };  // upper bout centre
+  const BRIDGE    = { x: 234, y: 184 };  // bridge — bow contact point
+  const VIOL_LC   = { x: 218, y: 213 };  // lower bout centre
+  const NECK_ROOT = { x: 268, y: 142 };  // where neck meets body
+  const NUT       = { x: 160, y: 106 };  // top of fingerboard / nut
+  const SCROLL    = { x: 140, y:  93 };  // scroll tip
+  const TAIL      = { x: 316, y: 133 };  // tailpiece
 
-  const BOW_Y       = 222;  // y of bow hair at bridge
-  const BOW_LEN     = 248;
-  const FROG_X_MAX  = 398;  // arm pulled in  (start of down-bow)
-  const FROG_X_MIN  = 292;  // arm extended   (end of down-bow)
-  const STRING_XS   = [155, 162, 169, 176]; // 4 string x-positions
+  // Bow — contact at bridge, stick runs roughly horizontal with slight tilt
+  const BOW_CX  = BRIDGE.x;             // fixed string-contact x
+  const BOW_CY  = BRIDGE.y + 1;         // fixed string-contact y
+  const BOW_LEN = 192;                   // full bow length (px)
+  // frogX = BOW_CX + bowPos * BOW_LEN  →  at bowPos=0 frog is near strings
+  const BOW_MIN = 0.30;
+  const BOW_MAX = 0.92;
+
+  // Two-bone arm lengths (px)
+  const LU = 80, LF = 76;   // left  (violin arm): upper, forearm
+  const RU = 84, RF = 78;   // right (bow arm):    upper, forearm
 
   // ── State ────────────────────────────────────────────────────────────────────
   let vCanvas, vCtx, rc;
   let staticImg   = null;
-  let bowPos      = 0.5;  // 0 = frog on strings, 1 = tip on strings
-  let bowDir      = 1;    // +1 down-bow, −1 up-bow
+  let bowPos      = 0.55;
+  let bowSmooth   = 0.55;
+  let bowDir      = 1;
   let lastNoteIdx = -1;
   let animId      = null;
   let isOpen      = false;
 
-  // ── Helpers ──────────────────────────────────────────────────────────────────
-  function frogX() {
-    return FROG_X_MAX - bowPos * (FROG_X_MAX - FROG_X_MIN);
+  // ── 2-bone IK: returns elbow position ────────────────────────────────────────
+  // flipDown=false → elbow bends in the "negative-perp" direction (hangs downward)
+  function ik(sx, sy, hx, hy, L1, L2, flipDown) {
+    const dx = hx - sx, dy = hy - sy;
+    let   d  = Math.sqrt(dx * dx + dy * dy);
+    d = Math.min(d, L1 + L2 - 0.5);
+    const cosA = (d * d + L1 * L1 - L2 * L2) / (2 * d * L1);
+    const a    = Math.acos(Math.max(-1, Math.min(1, cosA)));
+    const base = Math.atan2(dy, dx);
+    const ang  = flipDown ? base + a : base - a;
+    return { x: sx + L1 * Math.cos(ang), y: sy + L1 * Math.sin(ang) };
   }
 
+  // ── Finger position along fingerboard (open string → 4th pos) ────────────────
   function fingerPos(midi) {
-    if (!midi) return { x: NUT.x + 3, y: NUT.y + 2 };
+    if (!midi) return { x: NUT.x, y: NUT.y };
     const t = Math.max(0, Math.min(1, (midi - 55) / (84 - 55)));
-    return {
-      x: NUT.x + t * (NECK_JN.x - NUT.x),
-      y: NUT.y + t * (NECK_JN.y - NUT.y),
-    };
+    return { x: NUT.x + t * (NECK_ROOT.x - NUT.x),
+             y: NUT.y + t * (NECK_ROOT.y - NUT.y) };
   }
 
-  // ── Static render (violin body + figure torso, cached) ───────────────────────
+  // ── Static render (violin + figure body — cached to offscreen canvas) ─────────
   function renderStatic() {
-    const oc  = document.createElement('canvas');
-    oc.width  = VW; oc.height = VH;
+    const oc = document.createElement('canvas');
+    oc.width = VW; oc.height = VH;
     const ox  = oc.getContext('2d');
     const orc = rough.canvas(oc);
 
-    // Paper background
-    ox.fillStyle = '#f7f2e8';
+    // Warm parchment
+    ox.fillStyle = '#f3ecdf';
     ox.fillRect(0, 0, VW, VH);
-    for (let i = 0; i < 1400; i++) {
-      ox.fillStyle = `rgba(160,140,100,${Math.random() * 0.022})`;
+    for (let i = 0; i < 2200; i++) {
+      ox.fillStyle = `rgba(138,112,76,${Math.random() * 0.016})`;
       ox.fillRect(Math.random() * VW, Math.random() * VH, 2, 2);
     }
 
-    const wood = { roughness: 1.4, stroke: '#4a2e10', strokeWidth: 2.2, fill: '#c4883a', fillStyle: 'solid' };
-    const dark = { roughness: 1.5, stroke: '#2a1608', strokeWidth: 1.8, fill: '#1a0e04', fillStyle: 'solid' };
+    // ── Violin body ───────────────────────────────────────────────────────────
+    const wood = { roughness: 1.3, stroke: '#52300e', strokeWidth: 2.2, fill: '#c87c2c', fillStyle: 'solid' };
 
     // Lower bout
-    orc.ellipse(VIOL_LC.x, VIOL_LC.y, 94, 82, wood);
+    orc.ellipse(VIOL_LC.x, VIOL_LC.y, 90, 68, wood);
     // Upper bout
-    orc.ellipse(VIOL_UC.x, VIOL_UC.y, 74, 66, wood);
-    // Waist fill
-    ox.fillStyle = '#c4883a';
+    orc.ellipse(VIOL_UC.x, VIOL_UC.y, 70, 54, wood);
+    // Waist fill (solid wood between bouts)
+    ox.fillStyle = '#c87c2c';
     ox.beginPath();
-    ox.ellipse(VIOL_UC.x + 4, VIOL_UC.y + 42, 36, 20, 0.15, 0, Math.PI * 2);
+    ox.ellipse(VIOL_UC.x - 10, VIOL_UC.y + 37, 28, 18, -0.22, 0, Math.PI * 2);
     ox.fill();
-    // Re-outline
-    orc.ellipse(VIOL_LC.x, VIOL_LC.y, 94, 82, { roughness: 1.2, stroke: '#4a2e10', strokeWidth: 2, fill: 'transparent' });
-    orc.ellipse(VIOL_UC.x, VIOL_UC.y, 74, 66, { roughness: 1.2, stroke: '#4a2e10', strokeWidth: 2, fill: 'transparent' });
-    // Purfling
-    orc.ellipse(VIOL_LC.x, VIOL_LC.y, 82, 70, { roughness: 1, stroke: '#2a1608', strokeWidth: 1, fill: 'transparent' });
+    // Varnish sheen highlight
+    ox.fillStyle = 'rgba(255,210,140,0.20)';
+    ox.beginPath();
+    ox.ellipse(VIOL_LC.x - 12, VIOL_LC.y - 8, 22, 14, -0.4, 0, Math.PI * 2);
+    ox.fill();
+    // Outline re-pass
+    orc.ellipse(VIOL_LC.x, VIOL_LC.y, 90, 68, { roughness: 1.0, stroke: '#52300e', strokeWidth: 1.8, fill: 'transparent' });
+    orc.ellipse(VIOL_UC.x, VIOL_UC.y, 70, 54, { roughness: 1.0, stroke: '#52300e', strokeWidth: 1.8, fill: 'transparent' });
+    // Purfling (inlay border)
+    orc.ellipse(VIOL_LC.x, VIOL_LC.y, 76, 55, { roughness: 0.9, stroke: '#2a1408', strokeWidth: 1.1, fill: 'transparent' });
 
     // F-holes
-    orc.line(BRIDGE.x - 16, BRIDGE.y - 22, BRIDGE.x - 20, BRIDGE.y + 18, { roughness: 2.2, stroke: '#2a1608', strokeWidth: 2.2 });
-    orc.line(BRIDGE.x + 12, BRIDGE.y - 20, BRIDGE.x + 10, BRIDGE.y + 20, { roughness: 2.2, stroke: '#2a1608', strokeWidth: 2.2 });
+    orc.line(BRIDGE.x - 13, BRIDGE.y - 20, BRIDGE.x - 17, BRIDGE.y + 13, { roughness: 2.1, stroke: '#2a1408', strokeWidth: 2.3 });
+    orc.line(BRIDGE.x +  7, BRIDGE.y - 18, BRIDGE.x +  5, BRIDGE.y + 14, { roughness: 2.1, stroke: '#2a1408', strokeWidth: 2.3 });
+    // F-hole notch dots
+    orc.ellipse(BRIDGE.x - 13, BRIDGE.y - 16, 5, 4, { roughness: 1, stroke: '#180c04', fill: '#180c04', fillStyle: 'solid', strokeWidth: 1 });
+    orc.ellipse(BRIDGE.x +  7, BRIDGE.y - 14, 5, 4, { roughness: 1, stroke: '#180c04', fill: '#180c04', fillStyle: 'solid', strokeWidth: 1 });
 
-    // Neck wood
-    orc.line(NUT.x, NUT.y, NECK_JN.x, NECK_JN.y, { roughness: 0.8, stroke: '#7a5030', strokeWidth: 13 });
-    // Fingerboard (darker)
-    orc.line(NUT.x - 2, NUT.y + 2, NECK_JN.x - 2, NECK_JN.y + 2, { roughness: 0.5, stroke: '#1a0e04', strokeWidth: 7 });
+    // Neck (maple — wide)
+    orc.line(NUT.x, NUT.y, NECK_ROOT.x, NECK_ROOT.y, { roughness: 0.8, stroke: '#6a3c18', strokeWidth: 15 });
+    // Fingerboard (ebony — narrower, darker)
+    orc.line(NUT.x - 1, NUT.y + 3, NECK_ROOT.x - 1, NECK_ROOT.y + 2, { roughness: 0.5, stroke: '#120802', strokeWidth: 9 });
+    // Wood grain on neck
+    orc.line(NUT.x + 4, NUT.y - 2, NECK_ROOT.x + 3, NECK_ROOT.y - 1, { roughness: 2.2, stroke: '#8a5228', strokeWidth: 1.1 });
 
-    // 4 Strings
+    // 4 strings (E/A silver, D/G golden-wound)
     for (let i = 0; i < 4; i++) {
-      const nutOff = -6 + i * 4;
-      orc.line(NUT.x + nutOff, NUT.y + 2, STRING_XS[i], TAIL.y - 2,
-        { roughness: 0.3, stroke: '#909090', strokeWidth: 0.9 });
+      const nx = NUT.x + (i - 1.5) * 3.2;
+      const tx = TAIL.x + (i - 1.5) * 2.0;
+      orc.line(nx, NUT.y, tx, TAIL.y, {
+        roughness: 0.2,
+        stroke: i < 2 ? '#c0c0c0' : '#d0b870',
+        strokeWidth: [0.7, 0.9, 1.1, 1.4][i]
+      });
     }
 
-    // Bridge arch
-    orc.arc(BRIDGE.x, BRIDGE.y - 4, 26, 14, Math.PI, 0, false, { roughness: 2, stroke: '#7a5030', strokeWidth: 2.5 });
-    orc.line(BRIDGE.x - 10, BRIDGE.y + 4, BRIDGE.x + 10, BRIDGE.y + 4, { roughness: 1, stroke: '#7a5030', strokeWidth: 1.5 });
+    // Bridge (maple arch + feet)
+    orc.arc(BRIDGE.x, BRIDGE.y - 4, 22, 11, Math.PI, 0, false, { roughness: 2, stroke: '#7a5022', strokeWidth: 2.5 });
+    orc.line(BRIDGE.x - 8, BRIDGE.y + 3, BRIDGE.x + 8, BRIDGE.y + 3, { roughness: 1, stroke: '#7a5022', strokeWidth: 1.5 });
+    orc.line(BRIDGE.x - 7, BRIDGE.y + 3, BRIDGE.x - 6, BRIDGE.y + 8, { roughness: 1.5, stroke: '#7a5022', strokeWidth: 1.8 });
+    orc.line(BRIDGE.x + 6, BRIDGE.y + 3, BRIDGE.x + 7, BRIDGE.y + 8, { roughness: 1.5, stroke: '#7a5022', strokeWidth: 1.8 });
 
-    // Scroll
-    orc.arc(SCROLL.x + 10, SCROLL.y + 10, 26, 26, Math.PI * 0.5, Math.PI * 2.6, false, { roughness: 2.5, stroke: '#3a1e08', strokeWidth: 2.8 });
-    orc.arc(SCROLL.x + 8,  SCROLL.y + 8,  13, 13, Math.PI * 0.5, Math.PI * 2.6, false, { roughness: 2,   stroke: '#3a1e08', strokeWidth: 1.5 });
+    // Scroll (double spiral)
+    orc.arc(SCROLL.x + 9, SCROLL.y + 9, 23, 21, Math.PI * 0.5, Math.PI * 2.7, false, { roughness: 2.5, stroke: '#3a1a08', strokeWidth: 2.8 });
+    orc.arc(SCROLL.x + 7, SCROLL.y + 7, 11, 10, Math.PI * 0.5, Math.PI * 2.7, false, { roughness: 2.0, stroke: '#3a1a08', strokeWidth: 1.5 });
+    // Peg box
+    orc.line(NUT.x - 2, NUT.y - 2, SCROLL.x + 14, SCROLL.y + 7, { roughness: 1, stroke: '#5a3010', strokeWidth: 4 });
+    // Tuning pegs (4)
+    for (let p = 0; p < 4; p++) {
+      orc.ellipse(NUT.x - 6 + p * 3.2, NUT.y - 5 - p * 2.8, 5, 3,
+        { roughness: 1.5, stroke: '#3a1808', fill: '#2a1008', fillStyle: 'solid', strokeWidth: 1 });
+    }
 
-    // Tailpiece
+    // Tailpiece (ebony)
     orc.polygon(
-      [[TAIL.x - 14, TAIL.y - 5], [TAIL.x + 14, TAIL.y - 5],
-       [TAIL.x + 10, TAIL.y + 18], [TAIL.x - 10, TAIL.y + 18]],
-      dark
+      [[TAIL.x - 11, TAIL.y - 4], [TAIL.x + 11, TAIL.y - 4],
+       [TAIL.x +  8, TAIL.y + 14], [TAIL.x -  8, TAIL.y + 14]],
+      { roughness: 1.4, stroke: '#2a1408', fill: '#180c04', fillStyle: 'solid', strokeWidth: 1.8 }
     );
 
-    // Chin rest
-    orc.ellipse(VIOL_UC.x + 22, VIOL_UC.y - 34, 28, 14,
-      { roughness: 1.5, stroke: '#3a1e08', fill: '#1a0e04', fillStyle: 'solid', strokeWidth: 1.5 });
+    // Chin rest (ebony, near player)
+    orc.ellipse(CHIN_REST.x, CHIN_REST.y, 30, 13,
+      { roughness: 1.5, stroke: '#2a1408', fill: '#180c04', fillStyle: 'solid', strokeWidth: 1.5 });
+    orc.line(CHIN_REST.x - 8, CHIN_REST.y + 6, CHIN_REST.x - 8, CHIN_REST.y + 11, { roughness: 1, stroke: '#2a1408', strokeWidth: 1.5 });
+    orc.line(CHIN_REST.x + 8, CHIN_REST.y + 6, CHIN_REST.x + 8, CHIN_REST.y + 11, { roughness: 1, stroke: '#2a1408', strokeWidth: 1.5 });
 
-    // Head
-    orc.ellipse(HEAD.x, HEAD.y, HEAD.rx * 2, HEAD.ry * 2,
-      { roughness: 1.2, stroke: '#3a2008', strokeWidth: 1.8, fill: '#f0c880', fillStyle: 'solid' });
-    // Hair
-    orc.arc(HEAD.x, HEAD.y - 10, HEAD.rx * 2 - 2, HEAD.ry * 1.5, Math.PI, 0, false,
-      { roughness: 3.5, stroke: '#180e00', strokeWidth: 6 });
-    // Ear
-    orc.arc(HEAD.x - HEAD.rx + 2, HEAD.y + 4, 10, 14, Math.PI * 0.5, Math.PI * 1.5, false,
-      { roughness: 2, stroke: '#c09060', strokeWidth: 1.5 });
-
-    // Torso / jacket
-    orc.line(BODY_TOP.x, BODY_TOP.y, L_SHOUL.x, L_SHOUL.y, { roughness: 1.5, stroke: '#1a1828', strokeWidth: 6 });
-    orc.line(BODY_TOP.x, BODY_TOP.y, R_SHOUL.x, R_SHOUL.y, { roughness: 1.5, stroke: '#1a1828', strokeWidth: 6 });
-    orc.line(BODY_TOP.x, BODY_TOP.y, BODY_BOT.x, BODY_BOT.y, { roughness: 1.5, stroke: '#1a1828', strokeWidth: 6 });
-    orc.ellipse(BODY_TOP.x + 18, BODY_TOP.y + 105, 95, 178,
-      { roughness: 2, stroke: '#12101e', fill: '#12101e', fillStyle: 'hachure', fillWeight: 2.5, hachureGap: 9, hachureAngle: 42 });
-    // Shirt front
-    orc.line(BODY_TOP.x + 12, BODY_TOP.y + 8, BODY_TOP.x + 12, BODY_TOP.y + 48,
-      { roughness: 1.5, stroke: '#e8e0d0', strokeWidth: 2 });
-
+    // ── Figure ────────────────────────────────────────────────────────────────
+    // Concert jacket (hachure fill)
+    orc.ellipse(BODY_TOP.x + 8, BODY_TOP.y + 120, 106, 198,
+      { roughness: 1.9, stroke: '#0e0d14', fill: '#0e0d14',
+        fillStyle: 'hachure', fillWeight: 2.8, hachureGap: 11, hachureAngle: 48 });
+    // Lapels
+    orc.line(BODY_TOP.x + 5, BODY_TOP.y + 5, BODY_TOP.x - 6, BODY_TOP.y + 44,
+      { roughness: 1.5, stroke: '#22202e', strokeWidth: 2.8 });
+    orc.line(BODY_TOP.x + 5, BODY_TOP.y + 5, BODY_TOP.x + 17, BODY_TOP.y + 44,
+      { roughness: 1.5, stroke: '#22202e', strokeWidth: 2.8 });
+    // Shirt + bow tie
+    orc.line(BODY_TOP.x + 5, BODY_TOP.y + 7, BODY_TOP.x + 5, BODY_TOP.y + 52,
+      { roughness: 1.4, stroke: '#ede6d8', strokeWidth: 2.2 });
+    orc.ellipse(BODY_TOP.x + 5, BODY_TOP.y + 7, 14, 7,
+      { roughness: 1.8, stroke: '#1a1828', fill: '#1a1828', fillStyle: 'solid', strokeWidth: 1 });
+    // Shoulder seams
+    orc.line(BODY_TOP.x, BODY_TOP.y, L_SHOUL.x, L_SHOUL.y, { roughness: 1.4, stroke: '#0e0d14', strokeWidth: 5 });
+    orc.line(BODY_TOP.x, BODY_TOP.y, R_SHOUL.x, R_SHOUL.y, { roughness: 1.4, stroke: '#0e0d14', strokeWidth: 5 });
     // Legs
-    orc.line(BODY_BOT.x - 12, BODY_BOT.y, BODY_BOT.x - 18, BODY_BOT.y + 62, { roughness: 2, stroke: '#1a1828', strokeWidth: 5 });
-    orc.line(BODY_BOT.x + 8,  BODY_BOT.y, BODY_BOT.x + 12, BODY_BOT.y + 62, { roughness: 2, stroke: '#1a1828', strokeWidth: 5 });
+    orc.line(BODY_BOT.x - 14, BODY_BOT.y, BODY_BOT.x - 18, BODY_BOT.y + 58, { roughness: 2, stroke: '#0e0d14', strokeWidth: 5 });
+    orc.line(BODY_BOT.x +  6, BODY_BOT.y, BODY_BOT.x + 10, BODY_BOT.y + 58, { roughness: 2, stroke: '#0e0d14', strokeWidth: 5 });
+
+    // Neck
+    orc.line(HEAD.x - 3, HEAD.y + HEAD.ry - 2, BODY_TOP.x + 2, BODY_TOP.y + 5,
+      { roughness: 0.8, stroke: '#d4a868', strokeWidth: 10 });
+    // Head (face slightly angled toward violin — chin dips left)
+    orc.ellipse(HEAD.x, HEAD.y, HEAD.rx * 2, HEAD.ry * 2,
+      { roughness: 1.1, stroke: '#3a2008', strokeWidth: 1.8, fill: '#f2c87a', fillStyle: 'solid' });
+    // Hair (swept back)
+    orc.arc(HEAD.x - 4, HEAD.y - 8, HEAD.rx * 2 - 2, HEAD.ry * 1.5, Math.PI, 0, false,
+      { roughness: 3.5, stroke: '#1c0e00', strokeWidth: 7 });
+    orc.arc(HEAD.x - HEAD.rx, HEAD.y - 3, 14, 18, Math.PI * 0.3, Math.PI * 1.1, false,
+      { roughness: 2.5, stroke: '#1c0e00', strokeWidth: 5 });
+    // Ear
+    orc.arc(HEAD.x - HEAD.rx + 3, HEAD.y + 6, 10, 14, Math.PI * 0.5, Math.PI * 1.5, false,
+      { roughness: 1.8, stroke: '#b08048', strokeWidth: 1.5 });
+    // Earring
+    orc.ellipse(HEAD.x - HEAD.rx + 2, HEAD.y + 13, 4, 4,
+      { roughness: 1, stroke: '#a07830', fill: '#c8a040', fillStyle: 'solid', strokeWidth: 1 });
+    // Jawline (chin dipping toward chin rest)
+    orc.line(HEAD.x - 18, HEAD.y + 22, HEAD.x - 8, HEAD.y + HEAD.ry - 1,
+      { roughness: 1.5, stroke: '#c09458', strokeWidth: 1.5 });
 
     staticImg = oc;
   }
@@ -1050,7 +1111,7 @@ drawIdle();
     const t     = currentTime();
     const notes = state.notes;
 
-    // Find active note
+    // Active note
     let activeNote = null, noteIdx = -1;
     for (let i = 0; i < notes.length; i++) {
       const n = notes[i];
@@ -1059,95 +1120,143 @@ drawIdle();
       }
     }
 
-    // Note change → flip bow direction
+    // Note change → reverse bow
     if (noteIdx !== -1 && noteIdx !== lastNoteIdx) {
-      bowDir = -bowDir;
+      bowDir      = -bowDir;
       lastNoteIdx = noteIdx;
     }
 
-    // Advance bow (speed ∝ 1/duration so short notes = fast bow)
     if (activeNote) {
-      const speed = Math.min(0.022, 0.45 / (activeNote.duration * 60));
+      const speed = Math.min(0.018, 0.38 / (activeNote.duration * 60));
       bowPos += bowDir * speed;
-      if (bowPos >= 1) { bowPos = 1; bowDir = -1; }
-      if (bowPos <= 0) { bowPos = 0; bowDir =  1; }
+      if (bowPos >= BOW_MAX) { bowPos = BOW_MAX; bowDir = -1; }
+      if (bowPos <= BOW_MIN) { bowPos = BOW_MIN; bowDir =  1; }
     }
+    bowSmooth += (bowPos - bowSmooth) * 0.12;
 
-    const fp   = activeNote ? fingerPos(activeNote.midi) : { x: NUT.x + 3, y: NUT.y + 2 };
-    const fx   = frogX();
-    const tipX = fx - BOW_LEN;
+    const fp    = activeNote ? fingerPos(activeNote.midi) : { x: NUT.x, y: NUT.y };
+    const frogX = BOW_CX + bowSmooth * BOW_LEN;
+    const tipX  = frogX - BOW_LEN;
+    // Bow tilt: stick rises slightly toward the tip (bow is cambered away from hair)
+    const bowStickY = (x) => BOW_CY + (frogX - x) * 0.045 - 8;
+    const bowHairY  = (x) => BOW_CY + (frogX - x) * 0.018;
 
-    // Composite: static base first
     vCtx.clearRect(0, 0, VW, VH);
     vCtx.drawImage(staticImg, 0, 0);
 
-    // ── Left arm (violin arm) ──
-    const elbLX = (L_SHOUL.x + fp.x) / 2 - 14;
-    const elbLY = (L_SHOUL.y + fp.y) / 2 + 28;
-    rc.line(L_SHOUL.x, L_SHOUL.y, elbLX, elbLY, { roughness: 1.5, stroke: '#1a1828', strokeWidth: 6 });
-    rc.line(elbLX, elbLY, fp.x, fp.y,            { roughness: 1.2, stroke: '#1a1828', strokeWidth: 5 });
-    // Left hand
-    rc.ellipse(fp.x - 3, fp.y + 1, 15, 10,
-      { roughness: 2, stroke: '#3a2008', fill: '#f0c880', fillStyle: 'solid', strokeWidth: 1.5 });
-    // Pressing fingers
-    if (activeNote) {
+    // ── Left arm (violin arm) — elbow hangs naturally DOWN ───────────────────
+    const lhx = fp.x + 1, lhy = fp.y + 9;
+    const elbL = ik(L_SHOUL.x, L_SHOUL.y, lhx, lhy, LU, LF, false);
+    rc.line(L_SHOUL.x, L_SHOUL.y, elbL.x, elbL.y, { roughness: 1.4, stroke: '#0e0d14', strokeWidth: 8 });
+    rc.line(elbL.x, elbL.y, lhx, lhy,             { roughness: 1.2, stroke: '#0e0d14', strokeWidth: 7 });
+    // Left hand wrapping neck from below
+    rc.ellipse(fp.x - 3, fp.y + 6, 18, 12,
+      { roughness: 1.7, stroke: '#3a2008', fill: '#f2c87a', fillStyle: 'solid', strokeWidth: 1.5 });
+    // Thumb (visible on underside of neck)
+    rc.ellipse(fp.x + 5, fp.y + 1, 9, 6,
+      { roughness: 1.5, stroke: '#3a2008', fill: '#d4a860', fillStyle: 'solid', strokeWidth: 1 });
+    // Fingers pressing strings
+    if (activeNote && !activeNote.is_rest) {
       for (let f = 0; f < 3; f++) {
-        rc.ellipse(fp.x - 5 + f * 3, fp.y + 3, 5, 4,
-          { roughness: 1.5, stroke: '#3a2008', fill: '#d0a060', fillStyle: 'solid', strokeWidth: 1 });
+        rc.ellipse(fp.x - 6 + f * 4, fp.y - 1, 7, 5,
+          { roughness: 1.5, stroke: '#3a2008', fill: '#d4a860', fillStyle: 'solid', strokeWidth: 1 });
       }
     }
 
-    // ── Right arm (bow arm) ──
-    const elbRX = (R_SHOUL.x + fx) / 2 + 18;
-    const elbRY = 218;
-    rc.line(R_SHOUL.x, R_SHOUL.y, elbRX, elbRY, { roughness: 1.5, stroke: '#1a1828', strokeWidth: 6 });
-    rc.line(elbRX, elbRY, fx, BOW_Y + 5,         { roughness: 1.2, stroke: '#1a1828', strokeWidth: 5 });
-    // Right hand
-    rc.ellipse(fx + 3, BOW_Y + 9, 18, 12,
-      { roughness: 1.8, stroke: '#3a2008', fill: '#f0c880', fillStyle: 'solid', strokeWidth: 1.5 });
+    // ── Right arm (bow arm) — elbow drops, forearm swings with bow ───────────
+    const rhx = frogX, rhy = bowHairY(frogX) + 5;
+    const elbR = ik(R_SHOUL.x, R_SHOUL.y, rhx, rhy, RU, RF, false);
+    rc.line(R_SHOUL.x, R_SHOUL.y, elbR.x, elbR.y, { roughness: 1.4, stroke: '#0e0d14', strokeWidth: 8 });
+    rc.line(elbR.x, elbR.y, rhx, rhy,             { roughness: 1.2, stroke: '#0e0d14', strokeWidth: 7 });
+    // Bow grip (hand)
+    rc.ellipse(frogX + 3, rhy + 5, 22, 13,
+      { roughness: 1.7, stroke: '#3a2008', fill: '#f2c87a', fillStyle: 'solid', strokeWidth: 1.5 });
+    // Thumb on stick
+    rc.ellipse(frogX - 5, rhy - 2, 10, 7,
+      { roughness: 1.5, stroke: '#3a2008', fill: '#d4a860', fillStyle: 'solid', strokeWidth: 1 });
+    // Fingers curled over stick
+    for (let f = 0; f < 4; f++) {
+      rc.ellipse(frogX - 12 + f * 6, rhy + 8, 7, 5,
+        { roughness: 1.4, stroke: '#3a2008', fill: '#d4a860', fillStyle: 'solid', strokeWidth: 1 });
+    }
 
-    // ── Bow ──
-    // Stick (pernambuco wood)
-    rc.line(tipX, BOW_Y - 10, fx, BOW_Y + 4, { roughness: 0.7, stroke: '#6a3e18', strokeWidth: 3.5 });
-    // Bow hair
-    rc.line(tipX + 7, BOW_Y - 1, fx - 12, BOW_Y + 1, { roughness: 0.4, stroke: '#e0d8c8', strokeWidth: 2 });
-    // Frog (ebony)
-    rc.rectangle(fx - 15, BOW_Y - 4, 15, 12,
-      { roughness: 1.5, stroke: '#2a1608', fill: '#1a0e04', fillStyle: 'solid', strokeWidth: 1.5 });
-    // Tip (ivory)
-    rc.rectangle(tipX - 4, BOW_Y - 12, 8, 8,
+    // ── Bow ──────────────────────────────────────────────────────────────────
+    // Pernambuco stick (warm red-brown, slight upward camber)
+    rc.line(tipX, bowStickY(tipX), frogX, bowStickY(frogX),
+      { roughness: 0.6, stroke: '#7a3e14', strokeWidth: 3.8 });
+    // Bow hair (cream-white)
+    rc.line(tipX + 6, bowHairY(tipX), frogX - 14, bowHairY(frogX),
+      { roughness: 0.3, stroke: '#ddd5c0', strokeWidth: 2.2 });
+    // Frog (ebony block)
+    rc.rectangle(frogX - 15, bowHairY(frogX) - 3, 15, 12,
+      { roughness: 1.5, stroke: '#2a1408', fill: '#180c04', fillStyle: 'solid', strokeWidth: 1.5 });
+    // Frog eye (mother-of-pearl inlay)
+    rc.ellipse(frogX - 9, bowHairY(frogX) + 3, 5, 4,
+      { roughness: 0.9, stroke: '#9088a8', fill: '#ccc0d8', fillStyle: 'solid', strokeWidth: 0.8 });
+    // Winding / grip wrapping near frog
+    for (let w = 0; w < 4; w++) {
+      const wx = frogX - 20 - w * 4, wy = bowStickY(frogX - 20 - w * 4);
+      rc.line(wx, wy - 1, wx, wy + 5, { roughness: 0.5, stroke: '#a07040', strokeWidth: 1.6 });
+    }
+    // Tip plate (ivory)
+    rc.rectangle(tipX - 3, bowStickY(tipX) - 2, 7, 8,
       { roughness: 1.5, stroke: '#4a3018', fill: '#f0ece0', fillStyle: 'solid', strokeWidth: 1 });
 
-    // ── Rosin dust at string contact ──
-    if (activeNote) {
+    // ── String vibration glow when playing ───────────────────────────────────
+    if (activeNote && !activeNote.is_rest) {
+      const amp   = 1.4 + 0.5 * Math.sin(Date.now() * 0.013);
+      const strDX = TAIL.x - NUT.x, strDY = TAIL.y - NUT.y;
+      const strL  = Math.sqrt(strDX * strDX + strDY * strDY);
+      const nx    = -strDY / strL, ny = strDX / strL;   // perpendicular unit
+
       vCtx.save();
-      for (let i = 0; i < 6; i++) {
-        vCtx.globalAlpha = 0.1 + Math.random() * 0.15;
-        vCtx.fillStyle   = '#d4a040';
+      vCtx.strokeStyle = 'rgba(255,215,80,0.28)';
+      vCtx.lineWidth   = 2.8;
+      vCtx.shadowColor = 'rgba(255,190,50,0.55)';
+      vCtx.shadowBlur  = 7;
+      vCtx.beginPath();
+      const STEPS = 22;
+      for (let s = 0; s <= STEPS; s++) {
+        const frac  = s / STEPS;
+        const bx    = NUT.x + frac * strDX;
+        const by    = NUT.y + frac * strDY;
+        const wave  = Math.sin(frac * Math.PI * 5 + Date.now() * 0.022) * amp;
+        s === 0 ? vCtx.moveTo(bx + nx * wave, by + ny * wave)
+                : vCtx.lineTo(bx + nx * wave, by + ny * wave);
+      }
+      vCtx.stroke();
+      vCtx.restore();
+
+      // Rosin dust at contact
+      vCtx.save();
+      for (let i = 0; i < 9; i++) {
+        vCtx.globalAlpha = 0.06 + Math.random() * 0.10;
+        vCtx.fillStyle   = '#d0a038';
         vCtx.beginPath();
-        vCtx.arc(163 + (Math.random() - 0.5) * 12, BOW_Y + (Math.random() - 0.5) * 8,
-                 Math.random() * 2.5 + 0.5, 0, Math.PI * 2);
+        vCtx.arc(BOW_CX + (Math.random() - 0.5) * 16,
+                 BOW_CY + (Math.random() - 0.5) * 10,
+                 Math.random() * 2.5 + 0.4, 0, Math.PI * 2);
         vCtx.fill();
       }
       vCtx.restore();
     }
 
-    // ── Status labels ──
-    const hue = activeNote ? (240 + ((activeNote.midi - 48) / 36) * 200) % 360 : null;
+    // ── Status labels ─────────────────────────────────────────────────────────
+    const hue = activeNote ? (25 + ((activeNote.midi - 48) / 36) * 200) % 360 : null;
     document.getElementById('viol-note').textContent = activeNote ? activeNote.note_name : '—';
-    document.getElementById('viol-note').style.color = hue ? `hsl(${hue},65%,40%)` : '#7a5030';
-    document.getElementById('viol-bow').textContent  = bowDir > 0 ? '↓ down bow' : '↑ up bow';
+    document.getElementById('viol-note').style.color = hue ? `hsl(${hue},70%,36%)` : '#7a5030';
+    document.getElementById('viol-bow').textContent  = bowDir > 0 ? '↓ down-bow' : '↑ up-bow';
     document.getElementById('viol-pos').textContent  =
-      !activeNote       ? 'open string' :
-      activeNote.midi < 58 ? '1st pos'   :
-      activeNote.midi < 64 ? '2nd pos'   :
-      activeNote.midi < 70 ? '3rd pos'   : '4th+ pos';
+      !activeNote          ? 'open string'  :
+      activeNote.midi < 58 ? '1st position' :
+      activeNote.midi < 64 ? '2nd position' :
+      activeNote.midi < 70 ? '3rd position' : '4th position';
   }
 
-  // ── Open / close ─────────────────────────────────────────────────────────────
+  // ── Modal open / close ────────────────────────────────────────────────────────
   function openModal() {
     if (!staticImg) renderStatic();
-    isOpen = true; bowPos = 0.5; bowDir = 1; lastNoteIdx = -1;
+    isOpen = true; bowPos = 0.55; bowSmooth = 0.55; bowDir = 1; lastNoteIdx = -1;
     document.getElementById('violin-modal').classList.add('visible');
     drawFrame();
   }
@@ -1161,7 +1270,6 @@ drawIdle();
     vCanvas = document.getElementById('violin-canvas');
     vCtx    = vCanvas.getContext('2d');
     rc      = rough.canvas(vCanvas);
-
     document.getElementById('btn-animate').addEventListener('click', openModal);
     document.getElementById('btn-violin-close').addEventListener('click', closeModal);
     document.getElementById('violin-modal').addEventListener('click', e => {
