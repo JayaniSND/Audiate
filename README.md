@@ -44,7 +44,7 @@ pip install flask
 ./venv/bin/python app.py
 ```
 
-Then open **http://localhost:5000** in your browser.
+Then open **http://localhost:5001** in your browser.
 
 ## Usage
 
@@ -54,7 +54,7 @@ Then open **http://localhost:5000** in your browser.
 | Record audio | Click **⏺ Record**, sing/hum, click **⏹ Stop** |
 | Play | Click **Play** after processing completes |
 | Seek | Click anywhere on the progress bar |
-| Stop server | `pkill -f app.py` or `lsof -ti:5000 \| xargs kill -9` |
+| Stop server | `pkill -f app.py` or `lsof -ti:5001 \| xargs kill -9` |
 
 ## Project structure
 

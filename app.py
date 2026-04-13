@@ -12,6 +12,7 @@ Endpoints:
 
 import os, uuid, json, subprocess, sys, re
 from flask import Flask, request, jsonify, send_file, abort
+from haptics import trigger_haptic_for_note, kill_haptic, compile_haptic_binary
 
 BASE_DIR       = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_DIR     = os.path.join(BASE_DIR, "uploads")
@@ -104,7 +105,28 @@ def serve_audio(uid):
     return send_file(path, mimetype="audio/wav")
 
 
+@app.route("/api/haptic", methods=["POST"])
+def haptic():
+    data     = request.get_json(silent=True) or {}
+    midi     = data.get("midi")
+    duration = float(data.get("duration", 0.3))
+    legato   = bool(data.get("legato", False))
+    if midi is None:
+        return jsonify({"error": "missing midi"}), 400
+    trigger_haptic_for_note(int(midi), duration, legato=legato)
+    return jsonify({"ok": True})
+
+
+@app.route("/api/haptic/stop", methods=["POST"])
+def haptic_stop():
+    kill_haptic()
+    return jsonify({"ok": True})
+
+
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
+    compile_haptic_binary()
+    port = int(os.environ.get("PORT", 5001))
     print(f"Audiate running → http://localhost:{port}")
-    app.run(debug=True, port=port)
+    app.run(debug=True, host="::", port=port)
+
+

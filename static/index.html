@@ -9,16 +9,17 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
-    --bg:       #0f0806;
-    --surface:  #1a1008;
-    --border:   #3a2010;
-    --accent:   #FF5A5A;
-    --accent2:  #FF8B5A;
-    --accent3:  #FFA95A;
-    --accent4:  #FFD45A;
-    --text:     #ffffff;
-    --muted:    #a07060;
+    --bg:       #0c0806;
+    --surface:  #160d08;
+    --border:   #2e1a0e;
+    --accent:   #FF8B5A;
+    --text:     #f0e8e0;
+    --muted:    #8a6650;
     --radius:   12px;
+    --c1:       #FF5A5A;
+    --c2:       #FF8B5A;
+    --c3:       #FFA95A;
+    --c4:       #FFD45A;
   }
 
   body {
@@ -38,7 +39,11 @@
     align-items: center;
     gap: 12px;
     padding: 14px 24px;
+<<<<<<< HEAD
     background: rgba(20,10,6,0.90);
+=======
+    background: rgba(22,13,8,0.85);
+>>>>>>> a152f58e9479e1cb3e0b474d08c42f857cdda87f
     backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--border);
     flex-shrink: 0;
@@ -76,9 +81,15 @@
     border: 1px solid var(--border);
   }
   .btn-record {
+<<<<<<< HEAD
     background: #2a1510;
     color: #FFA95A;
     border: 1px solid #5a2a10;
+=======
+    background: #3d1f0f;
+    color: #ffb899;
+    border: 1px solid #7a3820;
+>>>>>>> a152f58e9479e1cb3e0b474d08c42f857cdda87f
   }
   .btn-record.recording {
     background: #5a1010;
@@ -90,14 +101,24 @@
     0%,100% { opacity:1; } 50% { opacity:0.65; }
   }
   .btn-play {
+<<<<<<< HEAD
     background: linear-gradient(135deg, #FF5A5A, #FF8B5A);
+=======
+    background: linear-gradient(135deg, #FF5A5A, #FFD45A);
+>>>>>>> a152f58e9479e1cb3e0b474d08c42f857cdda87f
     color: #fff;
     min-width: 80px;
   }
   .btn-animate {
+<<<<<<< HEAD
     background: #2a1f0a;
     color: #FFD45A;
     border: 1px solid #5a3f10;
+=======
+    background: #1c1410;
+    color: #FFA95A;
+    border: 1px solid #4a2e18;
+>>>>>>> a152f58e9479e1cb3e0b474d08c42f857cdda87f
   }
 
   /* ── Violin modal ── */
@@ -175,7 +196,11 @@
     min-height: 24px;
     letter-spacing: 0.03em;
   }
+<<<<<<< HEAD
   #status-bar.active { color: #FF8B5A; }
+=======
+  #status-bar.active { color: #FFA95A; }
+>>>>>>> a152f58e9479e1cb3e0b474d08c42f857cdda87f
 
   /* ── canvas area ── */
   #viz-wrap {
@@ -216,7 +241,11 @@
     align-items: center;
     gap: 14px;
     flex-shrink: 0;
+<<<<<<< HEAD
     background: rgba(20,10,6,0.90);
+=======
+    background: rgba(22,13,8,0.85);
+>>>>>>> a152f58e9479e1cb3e0b474d08c42f857cdda87f
     backdrop-filter: blur(12px);
     border-top: 1px solid var(--border);
   }
@@ -263,7 +292,11 @@
   .spinner {
     width: 48px; height: 48px;
     border: 3px solid var(--border);
+<<<<<<< HEAD
     border-top-color: #FF5A5A;
+=======
+    border-top-color: #FF8B5A;
+>>>>>>> a152f58e9479e1cb3e0b474d08c42f857cdda87f
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
   }
@@ -289,7 +322,11 @@
   <canvas id="canvas"></canvas>
 
   <div id="note-info">
+<<<<<<< HEAD
     <div id="note-name" style="color:#FF5A5A">—</div>
+=======
+    <div id="note-name" style="color:#FF8B5A">—</div>
+>>>>>>> a152f58e9479e1cb3e0b474d08c42f857cdda87f
     <div id="note-hz"></div>
   </div>
 
@@ -369,19 +406,18 @@ resizeCanvas();
 // ─── Colour helpers ───────────────────────────────────────────────────────────
 // Map MIDI number → hue (low = blue/violet, high = pink/yellow)
 function midiToHue(midi) {
-  // C3=48 → 240° (blue)  … C6=84 → 330° (pink)
+  // Low notes → coral red (0°) … high notes → golden yellow (55°)
   const lo = 48, hi = 84;
   const t  = Math.max(0, Math.min(1, (midi - lo) / (hi - lo)));
-  // 240° → 300° → 60° (cycling through spectrum)
-  return (240 + t * 200) % 360;
+  return t * 55;
 }
 function noteColor(midi, alpha = 1) {
   const h = midiToHue(midi);
-  return `hsla(${h}, 80%, 65%, ${alpha})`;
+  return `hsla(${h}, 95%, 62%, ${alpha})`;
 }
 function noteGlow(midi) {
   const h = midiToHue(midi);
-  return `hsla(${h}, 90%, 70%, 0.25)`;
+  return `hsla(${h}, 100%, 68%, 0.28)`;
 }
 
 // ─── Note geometry ────────────────────────────────────────────────────────────
@@ -587,18 +623,42 @@ function currentTime() {
 }
 
 // ─── Haptics ─────────────────────────────────────────────────────────────────
+// Fire haptics via the server (macOS Core Haptics) so they work on localhost.
+// Also try navigator.vibrate as a fallback for mobile browsers.
+function fireHaptic(midi, duration, legato) {
+  // Server-side haptics (macOS)
+  fetch("/api/haptic", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ midi, duration, legato }),
+  }).catch(() => {});
+
+  // Mobile fallback
+  if (navigator.vibrate) {
+    navigator.vibrate(Math.round(Math.min(duration * 900, 800)));
+  }
+}
+
 function scheduleHaptics(fromSec) {
   clearHaptics();
-  if (!navigator.vibrate) return;
-  const now = performance.now();
 
-  state.notes.forEach(note => {
-    if (note.is_rest) return;
+  let prevNoteEnd = null;
+
+  state.notes.forEach((note, i) => {
+    if (note.is_rest || note.midi === null) return;
     const delay = (note.start_time - fromSec) * 1000;
     if (delay < -100) return; // already passed
-    const t = setTimeout(() => {
-      navigator.vibrate(Math.round(Math.min(note.duration * 900, 800)));
-    }, Math.max(0, delay));
+
+    // Legato: if this note starts within 50 ms of the previous note ending,
+    // skip the attack transient for a smoother haptic transition.
+    const legato = prevNoteEnd !== null &&
+                   (note.start_time - prevNoteEnd) < 0.05;
+    prevNoteEnd = note.start_time + note.duration;
+
+    const t = setTimeout(
+      () => fireHaptic(note.midi, note.duration, legato),
+      Math.max(0, delay)
+    );
     state.hapticTimers.push(t);
   });
 }
@@ -606,13 +666,65 @@ function scheduleHaptics(fromSec) {
 function clearHaptics() {
   state.hapticTimers.forEach(t => clearTimeout(t));
   state.hapticTimers = [];
+  fetch("/api/haptic/stop", { method: "POST" }).catch(() => {});
   if (navigator.vibrate) navigator.vibrate(0);
 }
 
 // ─── Rendering ───────────────────────────────────────────────────────────────
-const WAVEFORM_H = 80;    // px reserved for waveform at top
+const WAVEFORM_H = 0;     // no waveform strip
 const SPECTRUM_H = 70;    // px reserved for spectrum at bottom
 const LABEL_W    = 32;    // px for piano key labels on left
+
+// ─── Abstract visual effects (ripples + ambient glow) ────────────────────────
+let ripples        = [];
+let lastRippleNote = null;
+
+function emitRipple(x, y, hue, intensity = 1) {
+  ripples.push({
+    x, y, r: 0,
+    maxR:  70 + intensity * 130,
+    alpha: 0.85,
+    hue,
+    speed: 2.5 + intensity * 2.2,
+  });
+}
+
+// Soft radial glow tinted to the current note's hue
+function drawAmbientGlow(W, H, activeNote) {
+  if (!activeNote) return;
+  const hue = midiToHue(activeNote.midi);
+  const cx  = W / 2, cy = H * 0.55;
+  const g   = ctx2d.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W, H) * 0.75);
+  g.addColorStop(0, `hsla(${hue}, 90%, 45%, 0.14)`);
+  g.addColorStop(1, `hsla(${hue}, 80%, 20%, 0)`);
+  ctx2d.fillStyle = g;
+  ctx2d.fillRect(0, 0, W, H);
+}
+
+// Concentric ring pulses that emanate from note onset positions
+function drawRipples(W, H) {
+  ripples = ripples.filter(r => r.alpha > 0.012);
+  for (const r of ripples) {
+    r.r    += r.speed;
+    r.alpha *= 0.932;
+    if (r.r > r.maxR) r.alpha = 0;
+
+    ctx2d.beginPath();
+    ctx2d.arc(r.x, r.y, r.r, 0, Math.PI * 2);
+    ctx2d.strokeStyle = `hsla(${r.hue}, 95%, 68%, ${r.alpha})`;
+    ctx2d.lineWidth   = 2.5;
+    ctx2d.stroke();
+
+    if (r.r > 22) {
+      ctx2d.beginPath();
+      ctx2d.arc(r.x, r.y, r.r * 0.55, 0, Math.PI * 2);
+      ctx2d.strokeStyle = `hsla(${r.hue + 14}, 90%, 78%, ${r.alpha * 0.42})`;
+      ctx2d.lineWidth   = 1;
+      ctx2d.stroke();
+    }
+  }
+}
+
 
 function drawFrame() {
   if (!state.playing) return;
@@ -630,14 +742,31 @@ function drawFrame() {
   state.analyser.getByteTimeDomainData(waveData);
   state.analyser.getByteFrequencyData(freqData);
 
+  // ── find active note ──
+  const activeNote = state.notes.find(
+    n => !n.is_rest && n.start_time <= t && t < n.start_time + n.duration
+  ) || null;
+
+  // ── emit effects on note onset ──
+  if (activeNote) {
+    const noteKey = activeNote.start_time + '-' + activeNote.midi;
+    if (noteKey !== lastRippleNote) {
+      lastRippleNote = noteKey;
+      const hx = W * ROLL.headRatio;
+      const ny = midiToY(activeNote.midi);
+      emitRipple(hx, ny, midiToHue(activeNote.midi), activeNote.confidence);
+    }
+  }
+
   // ── background ──
   ctx2d.clearRect(0, 0, W, H);
-  ctx2d.fillStyle = "#06060f";
+  ctx2d.fillStyle = "#0c0806";
   ctx2d.fillRect(0, 0, W, H);
 
+  drawAmbientGlow(W, H, activeNote);
   drawSpectrum(W, H);
   drawPianoRoll(W, H, t);
-  drawWaveform(W, H);
+  drawRipples(W, H);
   drawPlayhead(W, H, t);
   updateNoteInfo(t);
   updateTransport(t);
@@ -646,9 +775,15 @@ function drawFrame() {
 function drawIdle() {
   const W = canvas.width  / devicePixelRatio;
   const H = canvas.height / devicePixelRatio;
-  ctx2d.fillStyle = "#06060f";
+  ctx2d.fillStyle = "#0c0806";
   ctx2d.fillRect(0, 0, W, H);
-  ctx2d.fillStyle = "#1e1e3a";
+  // Subtle warm vignette glow
+  const g = ctx2d.createRadialGradient(W/2, H/2, 0, W/2, H/2, Math.max(W,H)*0.55);
+  g.addColorStop(0, "rgba(255,138,90,0.07)");
+  g.addColorStop(1, "rgba(255,90,90,0)");
+  ctx2d.fillStyle = g;
+  ctx2d.fillRect(0, 0, W, H);
+  ctx2d.fillStyle = "#4a2e1e";
   ctx2d.font = "14px system-ui";
   ctx2d.textAlign = "center";
   ctx2d.fillText("Drop an audio file here, or use the controls above.", W/2, H/2);
@@ -664,29 +799,12 @@ function drawSpectrum(W, H) {
     const idx   = Math.floor(i / barCount * freqData.length * 0.5);
     const val   = freqData[idx] / 255;
     const barH  = val * SPECTRUM_H * 1.4;
-    const hue   = 220 + (i / barCount) * 160;
-    ctx2d.fillStyle = `hsla(${hue}, 80%, 60%, ${0.3 + val * 0.5})`;
+    const hue   = (i / barCount) * 55;
+    ctx2d.fillStyle = `hsla(${hue}, 95%, 62%, ${0.28 + val * 0.55})`;
     ctx2d.fillRect(LABEL_W + i * barW + 1, yBase - barH, barW - 2, barH);
   }
 }
 
-// ── Waveform ─────────────────────────────────────────────────────────────────
-function drawWaveform(W, H) {
-  const sliceW  = (W - LABEL_W) / waveData.length;
-  const midY    = WAVEFORM_H / 2;
-
-  ctx2d.beginPath();
-  ctx2d.lineWidth   = 1.5;
-  ctx2d.strokeStyle = "rgba(180,160,255,0.8)";
-
-  for (let i = 0; i < waveData.length; i++) {
-    const v = (waveData[i] / 128.0 - 1) * (WAVEFORM_H * 0.45);
-    const x = LABEL_W + i * sliceW;
-    const y = midY + v;
-    i === 0 ? ctx2d.moveTo(x, y) : ctx2d.lineTo(x, y);
-  }
-  ctx2d.stroke();
-}
 
 // ── Piano roll ────────────────────────────────────────────────────────────────
 function drawPianoRoll(W, H, currentSec) {
@@ -752,14 +870,14 @@ function drawPlayhead(W, H, currentSec) {
 
   // gradient line
   const grad = ctx2d.createLinearGradient(x, ROLL.rollTop, x, ROLL.rollBot);
-  grad.addColorStop(0,   "rgba(150,120,255,0)");
-  grad.addColorStop(0.3, "rgba(160,130,255,0.9)");
-  grad.addColorStop(0.7, "rgba(160,130,255,0.9)");
-  grad.addColorStop(1,   "rgba(150,120,255,0)");
+  grad.addColorStop(0,   "rgba(255,140,60,0)");
+  grad.addColorStop(0.3, "rgba(255,150,70,0.9)");
+  grad.addColorStop(0.7, "rgba(255,150,70,0.9)");
+  grad.addColorStop(1,   "rgba(255,140,60,0)");
 
   ctx2d.strokeStyle = grad;
   ctx2d.lineWidth   = 2;
-  ctx2d.shadowColor = "#a78bfa";
+  ctx2d.shadowColor = "#FF8B5A";
   ctx2d.shadowBlur  = 12;
   ctx2d.beginPath();
   ctx2d.moveTo(x, ROLL.rollTop);
@@ -780,7 +898,7 @@ function updateNoteInfo(t) {
     noteHzEl.textContent   = active.hz ? `${active.hz} Hz` : "";
   } else {
     noteNameEl.textContent = "—";
-    noteNameEl.style.color = "#7b6fff";
+    noteNameEl.style.color = "#FF8B5A";
     noteHzEl.textContent   = "";
   }
 }
