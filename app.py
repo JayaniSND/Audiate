@@ -127,6 +127,6 @@ if __name__ == "__main__":
     compile_haptic_binary()
     port = int(os.environ.get("PORT", 5001))
     print(f"Audiate running → http://localhost:{port}")
-    app.run(debug=True, host="0.0.0.0", port=port)
+    app.run(debug=True, host="::", port=port)
 
 
